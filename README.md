@@ -16,6 +16,6 @@ https://user-images.githubusercontent.com/12469377/144763598-822187f1-0de6-4d10-
 - Upgraded DOTS packages to 0.51
 - Moved the simulation step inside a burst able job
 - Simulation stepping from `FixedUpdate` instead of `Update`
-- Quadrupled the number of dyanmics bodies
+- Quadrupled the number of dynamics bodies
 
 Quick performance check in the editor shows 350-500 fps on a Ryzen 5900x. Note that this still uses `StepImmediate`, which I think is fine and closer to how it'd run on a single core server.
