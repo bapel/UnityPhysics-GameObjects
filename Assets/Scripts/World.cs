@@ -3,13 +3,16 @@ using Unity.Mathematics;
 using Unity.Entities;
 using System;
 using System.Collections.Generic;
+using Unity.Jobs;
+using Unity.Burst;
+using static Unity.Physics.Authoring.DebugStream;
 
 public class World : IDisposable
 {
     private PhysicsWorld world;
-    private SimulationContext context = new SimulationContext();
+    private SimulationStepJob stepJob = new SimulationStepJob();
 
-    private readonly BlobAssetStore store = new BlobAssetStore();
+	private readonly BlobAssetStore store = new BlobAssetStore();
 
     // TODO: Better data structure for faster remove, etc.
     private readonly List<PhysicsBody> bodies = new List<PhysicsBody>();
@@ -34,7 +37,7 @@ public class World : IDisposable
     public void Dispose()
     {
         store.Dispose();
-        context.Dispose();
+        stepJob.context.Dispose();
         world.Dispose();
     }
 
@@ -90,7 +93,7 @@ public class World : IDisposable
     {
         Rebuild(deltaTime, gravity);
 
-        SimulationStepInput input = new SimulationStepInput()
+        stepJob.input = new SimulationStepInput()
         {
             World = world,
             TimeStep = deltaTime,
@@ -102,9 +105,8 @@ public class World : IDisposable
             SynchronizeCollisionWorld = true
         };
 
-        context.Reset(input);
-
-        Simulation.StepImmediate(input, ref context);
+		stepJob.context.Reset(stepJob.input);
+		stepJob.Schedule().Complete();
 
         // Copy the state from the PhysicsWorld back to the PhysicsBody components.
         foreach (var pb in bodies)
@@ -122,7 +124,7 @@ public class World : IDisposable
             }
         }
 
-        var triggers = context.TriggerEvents.GetEnumerator();
+        var triggers = stepJob.context.TriggerEvents.GetEnumerator();
 
         while (triggers.MoveNext())
         {
@@ -132,6 +134,18 @@ public class World : IDisposable
             pbA.OnTriggerEvent(pbB);
             pbB.OnTriggerEvent(pbA);
         }
+    }
+
+    [BurstCompile]
+    struct SimulationStepJob : IJob
+    {
+        public SimulationStepInput input;
+        public SimulationContext context;
+
+		public void Execute()
+        {
+			Simulation.StepImmediate(input, ref context);
+		}
     }
 
     private void Rebuild(float deltaTime, float3 gravity)

@@ -4,9 +4,6 @@ using UnityEngine;
 public class PhysicsRunner : MonoBehaviour
 {
     [SerializeField]
-    float deltaTime = 0.01f;
-
-    [SerializeField]
     float3 gravity = new float3(0, -9.8f, 0);
 
     [SerializeField]
@@ -15,8 +12,6 @@ public class PhysicsRunner : MonoBehaviour
     public event System.Action<float> OnUpdate;
 
     private World world;
-
-    private float accumulatedDeltaTime;
 
     private void Awake()
     {
@@ -41,17 +36,9 @@ public class PhysicsRunner : MonoBehaviour
         world.Dispose();
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
-        accumulatedDeltaTime += Time.deltaTime;
-
-        while (accumulatedDeltaTime > deltaTime)
-        {
-            OnUpdate?.Invoke(deltaTime);
-
-            world.Step(deltaTime, gravity, Mathf.Clamp(solverIterations, 1, int.MaxValue));
-
-            accumulatedDeltaTime -= deltaTime;
-        }
-    }
+        var deltaTime = Time.fixedDeltaTime;
+		world.Step(deltaTime, gravity, Mathf.Clamp(solverIterations, 1, int.MaxValue));
+	}
 }
